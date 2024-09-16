@@ -1,5 +1,5 @@
 # Java-Mini-Project
-OOPL Mini Project- Spelling Bee Game
+Spelling Bee Game
 
 Welcome to the Spelling Bee Game! This is a command-line word puzzle game where users are challenged to form words from a set of randomly generated letters. One of the letters is compulsory, and all words must include this letter. The game follows a Scrabble-style point system and ends when the user makes 5 mistakes.
 
