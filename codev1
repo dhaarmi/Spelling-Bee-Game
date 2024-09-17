@@ -1,1 +1,98 @@
+import java.io.*;
+import java.util.*;
+
+public class SpellingBeeGame {
+
+    private static final int MistakesAllowed = 5; // Max number of mistakes allowed
+    private static final int[] POINTS = {
+        1, 3, 3, 2, 1, 4, 2, 4, 1, 8, 5, 1, 1, 2, 1, 3, 10, 1, 1, 1, 1, 4, 4, 8, 4, 10
+    }; // Points for each letter (a=1, b=3, c=3, etc.)
+
+    public static void main(String[] args) {
+        try {
+            // Generate random letters
+            String letterSet = generateRandomLetters();
+            char mustInclude = generateMustIncludeLetter();
+            
+            System.out.println("Generated letters: " + letterSet);
+            System.out.println("Must include letter: " + mustInclude);
+
+            int mistakes = 0; // Count of mistakes made
+            Set<String> usedWords = new HashSet<>(); // Track words entered by the user
+            Scanner scanner = new Scanner(System.in);
+
+            while (mistakes < MistakesAllowed) {
+                System.out.print("Enter a word: ");
+                String userWord = scanner.nextLine().toLowerCase();
+
+                if (userWord.length() < 4) {
+                    System.out.println("Word must be at least 4 letters long.");
+                    mistakes++;
+                } else if (!userWord.contains(String.valueOf(mustInclude))) {
+                    System.out.println("Word must include the letter: " + mustInclude);
+                    mistakes++;
+                } else if (!areLettersValid(userWord, letterSet)) {
+                    System.out.println("Word contains invalid letters.");
+                    mistakes++;
+                } else if (!isWordInDictionary(userWord)) {
+                    System.out.println("Word is not in the dictionary.");
+                    mistakes++;
+                } else if (usedWords.contains(userWord)) {
+                    System.out.println("Word has already been used.");
+                } else {
+                    int score = calculatePoints(userWord);
+                    usedWords.add(userWord);
+                    System.out.println("Word accepted! Points: " + score);
+                }
+
+                System.out.println("Mistakes remaining: " + (MistakesAllowed - mistakes));
+            }
+
+            System.out.println("Game over! Total words used: " + usedWords.size());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Generate a random string of 6 letters
+    private static String generateRandomLetters() {
+        Random random = new Random();
+        String alphabet = "abcdefghijklmnopqrstuvwxyz";
+        return random.ints(6, 0, alphabet.length())
+                     .mapToObj(alphabet::charAt)
+                     .map(String::valueOf)
+                     .collect(Collectors.joining());
+    }
+
+    // Generate a random compulsory letter
+    private static char generateMustIncludeLetter() {
+        Random random = new Random();
+        String alphabet = "abcdefghijklmnopqrstuvwxyz";
+        return alphabet.charAt(random.nextInt(alphabet.length()));
+    }
+
+    // Check if all letters in the word are from the allowed set
+    private static boolean areLettersValid(String word, String allowedLetters) {
+        for (char ch : word.toCharArray()) {
+            if (allowedLetters.indexOf(ch) == -1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Check if the word exists in the dictionary file
+    private static boolean isWordInDictionary(String word) throws IOException {
+        Path path = Paths.get("dictionary.txt");
+        return Files.lines(path).anyMatch(line -> line.trim().equals(word));
+    }
+
+    // Calculate the Scrabble score for a given word
+    private static int calculatePoints(String word) {
+        return word.chars()
+                   .map(c -> POINTS[c - 'a'])
+                   .sum();
+    }
+}
 
