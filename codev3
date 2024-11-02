@@ -1,0 +1,224 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.io.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class SpellingBeeGameGUI extends JFrame {
+
+    static final int MISTAKES_ALLOWED = 5;
+    static final int[] POINTS = {1, 3, 3, 2, 1, 4, 2, 4, 1, 8, 5, 1, 1, 2, 1, 3, 10, 1, 1, 1, 1, 4, 4, 8, 4, 10};
+    static final String DICTIONARY_FILE = "C:\\Users\\Public\\Downloads\\dictionary.txt";
+    static Set<String> dictionary = new HashSet<>();
+
+    String letterSet;
+    char mustInclude;
+    StringBuilder currentWord = new StringBuilder();
+    int mistakes = 0;
+    int totalPoints = 0;
+    Set<String> usedWords = new HashSet<>();
+
+    JLabel wordLabel;
+    JLabel scoreLabel;
+    JLabel mistakesLabel;
+
+    public SpellingBeeGameGUI() {
+        loadDictionary();
+        setupGame();
+        setupGUI();
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(SpellingBeeGameGUI::new);
+    }
+
+    void setupGame() {
+        Set<Character> uniqueLetters = generateUniqueRandomLetters();
+        mustInclude = uniqueLetters.iterator().next();
+        uniqueLetters.remove(mustInclude);
+        letterSet = uniqueLetters.stream()
+                      .map(String::valueOf)
+                      .collect(Collectors.joining());
+    }
+
+    void setupGUI() {
+        setTitle("Spelling Bee Game");
+        setSize(400, 500);
+        setLayout(new BorderLayout());
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        getContentPane().setBackground(Color.BLACK);
+
+        JPanel lettersPanel = new JPanel();
+        lettersPanel.setLayout(null);
+        lettersPanel.setPreferredSize(new Dimension(300, 300));
+        lettersPanel.setBackground(Color.BLACK);
+        add(lettersPanel, BorderLayout.CENTER);
+
+        wordLabel = new JLabel("Current Word: ");
+        scoreLabel = new JLabel("Score: 0");
+        mistakesLabel = new JLabel("Mistakes Remaining: " + (MISTAKES_ALLOWED - mistakes));
+
+        wordLabel.setForeground(Color.WHITE);
+        scoreLabel.setForeground(Color.WHITE);
+        mistakesLabel.setForeground(Color.WHITE);
+
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.add(wordLabel);
+        infoPanel.add(scoreLabel);
+        infoPanel.add(mistakesLabel);
+        infoPanel.setBackground(Color.BLACK);
+        add(infoPanel, BorderLayout.NORTH);
+
+        int radius = 100;
+        int centerX = 150;
+        int centerY = 150;
+
+        // Display the six random letters around the circle
+        for (int i = 0; i < letterSet.length(); i++) {
+            char letter = letterSet.charAt(i);
+            JButton button = createLetterButton(letter, Color.WHITE);
+
+            double angle = 2 * Math.PI * i / letterSet.length();
+            int x = (int) (centerX + radius * Math.cos(angle));
+            int y = (int) (centerY + radius * Math.sin(angle));
+
+            button.setBounds(x, y, 50, 50);
+            lettersPanel.add(button);
+        }
+
+        // Display the compulsory letter in the center
+        JButton mustIncludeButton = createLetterButton(mustInclude, Color.YELLOW);
+        mustIncludeButton.setBounds(centerX - 0, centerY - 0, 50, 50);
+        lettersPanel.add(mustIncludeButton);
+
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setBackground(Color.BLACK);
+
+        JButton submitButton = new JButton("Submit Word");
+        submitButton.addActionListener(e -> submitWord());
+
+        JButton deleteButton = new JButton("Delete Last Letter");
+        deleteButton.addActionListener(e -> deleteLastLetter());
+
+        bottomPanel.add(deleteButton);
+        bottomPanel.add(submitButton);
+
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        setVisible(true);
+    }
+
+    JButton createLetterButton(char letter, Color color) {
+        JButton button = new JButton(String.valueOf(letter));
+        button.setFont(new Font("Arial", Font.BOLD, 18));
+        button.setBackground(color);
+        button.setFocusPainted(false);
+        button.addActionListener(e -> addLetterToWord(letter));
+        return button;
+    }
+
+    void addLetterToWord(char letter) {
+        currentWord.append(letter);
+        wordLabel.setText("Current Word: " + currentWord);
+    }
+
+    void deleteLastLetter() {
+        if (currentWord.length() > 0) {
+            currentWord.deleteCharAt(currentWord.length() - 1);
+            wordLabel.setText("Current Word: " + currentWord);
+        }
+    }
+
+    void submitWord() {
+        String userWord = currentWord.toString().toLowerCase();
+        if (validateWord(userWord)) {
+            int score = calculatePoints(userWord);
+            totalPoints += score;
+            usedWords.add(userWord);
+            JOptionPane.showMessageDialog(this, "Word accepted! Points: " + score);
+        }
+        currentWord.setLength(0);
+        wordLabel.setText("Current Word: ");
+        scoreLabel.setText("Score: " + totalPoints);
+        mistakesLabel.setText("Mistakes Remaining: " + (MISTAKES_ALLOWED - mistakes));
+
+        if (mistakes >= MISTAKES_ALLOWED) {
+            JOptionPane.showMessageDialog(this, "Game over! Congratulations! Your Total Score is: " + totalPoints);
+            System.exit(0);
+        }
+    }
+
+    boolean validateWord(String word) {
+        if (word.length() < 4) {
+            showError("Word must be at least 4 letters long.");
+            return false;
+        } else if (!word.contains(String.valueOf(mustInclude))) {
+            showError("Word must include the letter '" + mustInclude + "'.");
+            return false;
+        } else if (!areLettersValid(word, letterSet + mustInclude)) {
+            showError("Word contains invalid letters.");
+            return false;
+        } else if (!dictionary.contains(word)) {
+            showError("Word is not in the dictionary.");
+            return false;
+        } else if (usedWords.contains(word)) {
+            showError("Word has already been used.");
+            return false;
+        }
+        return true;
+    }
+
+    void showError(String message) {
+        JOptionPane.showMessageDialog(this, message);
+        mistakes++;
+    }
+
+    boolean areLettersValid(String word, String allowedLetters) {
+        for (char ch : word.toCharArray()) {
+            if (allowedLetters.indexOf(ch) == -1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    int calculatePoints(String word) {
+        return word.chars()
+                   .map(c -> POINTS[c - 'a'])
+                   .sum();
+    }
+
+    void loadDictionary() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(DICTIONARY_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                dictionary.add(line.toLowerCase());
+            }
+        } catch (IOException e) {
+            System.out.println("Error loading dictionary: " + e.getMessage());
+        }
+    }
+
+    Set<Character> generateUniqueRandomLetters() {
+        Random random = new Random();
+        String vowels = "aeiou";
+        String alphabet = "abcdefghijklmnopqrstuvwxyz";
+
+        Set<Character> letters = new LinkedHashSet<>();
+        
+        // Add two random vowels
+        while (letters.size() < 2) {
+            letters.add(vowels.charAt(random.nextInt(vowels.length())));
+        }
+
+        // Add other random letters, avoiding duplicates
+        while (letters.size() < 7) {
+            char letter = alphabet.charAt(random.nextInt(alphabet.length()));
+            letters.add(letter);
+        }
+        
+        return letters;
+    }
+}
